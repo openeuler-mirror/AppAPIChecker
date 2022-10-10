@@ -19,7 +19,8 @@ import mimetypes
 import re
 import subprocess
 
-import os,sys
+import os
+import sys
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parentdir)
 from checker import Checker
@@ -40,7 +41,7 @@ def _version_compare(version1: str, version2: str):
     if version1 == version2:
         return 0
     else:
-        max_version = subprocess.getoutput(r'echo "{} {}" | tr \' \' \'\n\' | sort -V | tr \'\n\' \' \' | awk \'{{'
+        max_version = subprocess.getoutput('echo "{} {}" | tr \' \' \'\n\' | sort -rV | tr \'\n\' \' \' | awk \'{{'
                                            r'print $1}}\''.format(version1, version2))
         if max_version == version1:
             return 1
@@ -72,7 +73,6 @@ def get_deb_depends(file: str):
 
     dep_list = re.split('[,|]', subprocess.getoutput(
         'dpkg -f {} Depends | sed \'s/ //g\''.format(file)).split('\n')[-1])
-    # print(dep_list)
     if dep_list != ['']:
         for deb in dep_list:
             if deb.find('(') != -1:
@@ -109,7 +109,20 @@ def deb_check(checker: Checker, name: str, checklist: list):
     data = {'name': name, 'result': '', 'detail': []}
     if checklist:
         for pkg in checklist:
-            pkgname = pkg['name']
+            # todo
+            # E: You must put some 'deb-src' URIs in your sources.list
+            # sourcelist缺少deb-src时应该处理为异常
+            print('apt showsrc {} | grep Package: | awk \'{{print $NF}}\' | sort | uniq'.format(pkg['name']))
+            pkgname = subprocess.getoutput('apt showsrc {} | grep Package: | awk \'{{print $NF}}\' | sort | uniq'.format(pkg['name'])).split('\n')[-1]
+
+            if 'deb-src' in pkgname and 'sources.list' in pkgname:
+                checker.logger.error(pkgname)
+                checker.logger.error('请确认是否安装apt-file 以及sourcelist里配置好deb-src')
+                sys.exit(1)
+                # return 'warning'
+
+            checker.logger.info(pkg['name'] + ' 对应的源码包为 ' + pkgname)
+
             limit = pkg['limit']
             version = pkg['version']
             checker.logger.info('### 正在检查' + pkgname + ' ###')
@@ -138,20 +151,20 @@ def deb_check(checker: Checker, name: str, checklist: list):
                             std_version = checker.stdfile[pkgname]['version']
                             result = _version_compare(version, std_version)
                             if result == 0:
-                                checker.logger.info('依赖版本符合版本')
+                                checker.logger.info('依赖版本符合标准要求')
                                 checker.logger.info('结果为pass')
                                 detail = _generate_detail_json(pkgname, level, 'pass')
                             elif result < 0:
-                                checker.logger.info('依赖版本要求 ' + level + ' 低于 ' + std_version)
+                                checker.logger.info('依赖版本要求 ' + version + ' 低于 ' + std_version)
                                 checker.logger.info('结果为warning')
                                 detail = _generate_detail_json(pkgname, level, 'warning',
-                                                               '依赖版本要求 ' + level + ' 低于 ' + std_version)
+                                                               '依赖版本要求 ' + version + ' 低于 ' + std_version)
                                 warning_num += 1
                             else:
-                                checker.logger.info('依赖版本要求 ' + level + ' 高于 ' + std_version)
+                                checker.logger.info('依赖版本要求 ' + version + ' 高于 ' + std_version)
                                 checker.logger.info('结果为warning')
                                 detail = _generate_detail_json(pkgname, level, 'warning',
-                                                               '依赖版本要求 ' + level + ' 高于 ' + std_version)
+                                                               '依赖版本要求 ' + version + ' 高于 ' + std_version)
                                 warning_num += 1
                         else:
                             checker.logger.info('依赖版本要求过严')
@@ -201,7 +214,7 @@ class PkgChecker(Checker):
         """
         # 存储参数，读取标准文件，初始化结果
         super().__init__()
-
+        stdfilepath = stdfilepath or os.path.abspath('Jsons/lib_list_1.0I.json')
         self.file = file
         if pkgmt == 'dpkg':
             json_formatter.format4pkg(stdfilepath, 'AppChecker_pkg')
@@ -236,7 +249,8 @@ class PkgChecker(Checker):
         if self.pkgmt == 'dpkg':
             if re.match(r'.*\.deb$', self.file):
                 deb_depends = get_deb_depends(self.file)
-                # self.logger.info('获取到依赖包列表 ' + str(deb_depends))
+                # deb_depends = [{'name': 'a', 'limit': '', 'version': ''}]
+                self.logger.info('获取到依赖包列表 ' + str(deb_depends))
 
                 result = deb_check(self, self.file, deb_depends)
             else:
@@ -265,11 +279,11 @@ class PkgChecker(Checker):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--pkgmanager", type=str, dest="pkgmt", required=True, help='输入当前系统包管理工具 dpkg/rpm')
     parser.add_argument("-p", "--path", type=str, dest="package_path", required=True, help='输入待测包路径')
+    parser.add_argument("-s", "--stdfile", type=str, dest="stdfile", required=False, help='输入使用标准文件路径')
     parser.add_argument("-t", "--standard", type=str, dest="standard", required=True,
                         help='输入评估待测包使用的标准 desktop/server')
-    parser.add_argument("-s", "--stdfile", type=str, dest="stdfile", required=True, help='输入使用标准文件路径')
-    parser.add_argument("-m", "--pkgmanager", type=str, dest="pkgmt", required=True, help='输入当前系统包管理工具 dpkg/rpm')
     args = parser.parse_args()
 
     # print(args.files, args.standard, args.stdfile)

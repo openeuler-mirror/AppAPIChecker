@@ -13,7 +13,9 @@ See the Mulan PSL v2 for more details.
 @Author  : wangbin
 """
 
-import os,sys
+import os
+import sys
+import json
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, parentdir)
 from utils.myjson import Json
@@ -108,6 +110,17 @@ def format4lib(file, path):
     Json(f'{path}/so_std.json').write(result)
 
 
+def format4sh(std_file):
+
+    with open(std_file, 'r', encoding='utf-8') as f:
+        cmd_list = json.load(f).get('system_cmds')
+
+    output_path = f'config/cmdlist.txt'
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.writelines('\n'.join([item.get('name') for item in cmd_list]))
+    return os.path.abspath(output_path)
+
+
 if __name__ == '__main__':
-    format4pkg('config/lib_list_1.0I(20220826).json', './')
-    format4lib('config/lib_list_1.0I(20220826).json', './')
+    format4pkg('Jsons/lib_list_1.0I(20220826).json', './')
+    format4lib('Jsons/lib_list_1.0I(20220826).json', './')

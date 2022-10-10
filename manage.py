@@ -20,6 +20,7 @@ import subprocess
 
 from AppChecker_C.appchecker_c import SoChecker
 from AppChecker_pkg.appchecker_pkg import PkgChecker
+from AppChecker_sh.appchecker_sh import ShChecker
 from utils.utils import local_time, mkdir
 from utils.logger import init_logger
 from utils.utils import get_env_info
@@ -41,9 +42,10 @@ def init_args():
     parser.add_argument("-l", "--level", type=str, dest="level", default='123',
                         help='选择比较的库的级别。值为 1、2、3、12、123、3；1只检查1级库，2只检查2级库，3只检查3级库，123 检查所有库')
     parser.add_argument("-p", "--path", type=str, dest="package_path", required=True, help='输入待测包路径')
-    parser.add_argument("-j", "--liblist", type=str, dest="liblist_path", default='config/lib_list_1.0I.json',
+    parser.add_argument("-j", "--liblist", type=str, dest="liblist_path", default='Jsons/lib_list_1.0I.json',
                         help='指定liblist.json配置文件的路径')
     parser.add_argument("-o", "--solist", type=str, dest="solist_path", help='指定solist.json配置文件的路径')
+    parser.add_argument("-c", "--cmdlist", type=str, dest="cmdlist_path", help='指定cmdlist文本文件的路径')
     parser.add_argument("-a", "--current", type=str, dest="libscan", default='no', help='检查本地库的版本是否符合满足应用要求 yes/no')
     parser.add_argument("-i", "--interface", type=str, dest="interfacescan", default='no', help='应用程序接口级检查 yes/no')
     parser.add_argument("-v", "--version", action='version', version='AppChecker 1.0')
@@ -62,7 +64,9 @@ def init_package(args):
         'rpm': f'rpm -qpi {package_path} |grep Name',
     }
     pkg_name = subprocess.getoutput(get_pkg_name.get(args.pkgmt)).split(':')[-1].strip()
-    work_space = mkdir(f"workspace/{pkg_name}_{local_time()}")
+    t = local_time()
+    work_space = mkdir(f"workspace/{pkg_name}_{t}")
+    output = mkdir(f"Output/{pkg_name}_{t}")
 
     # 解包到work space目录下package_temp
     target_dir = mkdir(f'{work_space}/PackageSubstance')
@@ -77,6 +81,7 @@ def init_package(args):
         'package_name': pkg_name,
         'package_path': package_path,
         'work_space': work_space,
+        'output': output,
         'binary': [],
         'shell': [],
         'perl': [],
@@ -133,18 +138,23 @@ def main(args):
 
     # 包 依赖检查
     stat['包依赖检查'] = PkgChecker(package_detail.get('package_path') or [], args.liblist_path, args.type,
-                               args.pkgmt).check().export(folder=package_detail.get('work_space')).stat()
+                               args.pkgmt).check().export(folder=package_detail.get('output')).stat()
     # 二进制文件 库依赖 检查
     stat['二进制文件检查'] = SoChecker(package_detail.get('binary'), args.liblist_path, args.type).check().export(
-        folder=package_detail.get('work_space')).stat() if package_detail.get('binary') else []
+        folder=package_detail.get('output')).stat() if package_detail.get('binary') else []
+
+    # shell 文件检查
+    stat['shell文件检查'] = ShChecker(args.type, args.cmdlist_path, file_list=package_detail.get('shell') or []).check(
+    ).export(folder=package_detail.get('output')).stat()
 
     # 结果收集输出
-    report = Json(f"{package_detail.get('work_space')}/report.json").write(stat)
+    report = Json(f"{package_detail.get('output')}/report.json").write(stat)
 
     # pprint.pprint(stat)
+    print('=' * 90)
     logger.info(f'测试结果为 {stat}')
     logger.info(f'测试完成， 测试报告请查看 {report}')
-    logger.info( f'更多详细报告在{package_detail.get("work_space")}')
+    logger.info(f'更多详细报告在{package_detail.get("output")}')
 
 
 if __name__ == '__main__':

@@ -13,7 +13,10 @@ See the Mulan PSL v2 for more details.
 @Author  : wangbin
 """
 from abc import ABC, abstractmethod
+import logging
 from utils.myjson import Json
+from utils.logger import init_logger
+
 
 
 class Checker(ABC):
@@ -36,6 +39,9 @@ class Checker(ABC):
             'result': 'pass',
             'data': []
         }
+        # 初始化logger
+        init_logger()
+        self.logger = logging.getLogger('AppChecker')
 
     @staticmethod
     def _get_standard(standard_path):
@@ -60,8 +66,9 @@ class Checker(ABC):
         :param folder: 输出报告所在的待测包结果文件夹
         :return: self
         """
-        folder = folder or 'report'
+        folder = folder or 'Output'
         Json(f'{folder}/{self.__class__.__name__}.json').write(self.result)
+        self.logger.info(f'测试完成，测试结果见 {folder}')
         return self
 
     def stat(self):
@@ -72,5 +79,6 @@ class Checker(ABC):
         stats = dict()
         for item in self.result.get('data'):
             stats[item.get('result')] = stats[item.get('result')] + 1 if stats.get(item.get('result')) else 1
+        self.logger.info(f'测试完成，{self.__class__.__name__}测试结果: {stats}')
         return stats
 

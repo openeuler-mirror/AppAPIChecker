@@ -27,5 +27,5 @@ class Json:
 
     def write(self, data: dict):
         with open(self.file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False)
+            json.dump(data, f, ensure_ascii=False, indent=1)
         return self.file

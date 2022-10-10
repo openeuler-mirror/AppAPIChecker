@@ -120,6 +120,7 @@ class SoChecker(Checker):
         """
         # 存储参数，读取标准文件，初始化结果
         super().__init__()
+        stdfilepath = stdfilepath or os.path.abspath('Jsons/lib_list_1.0I.json')
         json_formatter.format4lib(stdfilepath, 'AppChecker_C')
         self.name = __name__
         self.filelist = filelist
@@ -194,9 +195,10 @@ class SoChecker(Checker):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--files", nargs='+', dest="files", required=True, help='输入待测文件列表')
+    parser.add_argument("-s", "--stdfile", type=str, dest="stdfile", required=False, help='输入使用标准文件路径')
     parser.add_argument("-t", "--standard", type=str, dest="standard", required=True,
                         help='输入评估待测包使用的标准 desktop/server')
-    parser.add_argument("-s", "--stdfile", type=str, dest="stdfile", required=True, help='输入使用标准文件路径')
+
     args = parser.parse_args()
 
     # print(args.files, args.standard, args.stdfile)
