@@ -32,7 +32,12 @@ class ShChecker(Checker):
         # 存储参数，读取标准文件，初始化结果
         super().__init__()
         self.name = __name__
-        self.file_list = file_list or [file]
+        if file_list:
+            self.file_list = file_list
+        elif file:
+            self.file_list = file
+        else:
+            self.file_list = []
         self.type = type
         self.std_path = std_path or 'Jsons/cmd_list.json'
         # 初始化logger
@@ -57,17 +62,11 @@ class ShChecker(Checker):
         """
         self.logger.info('########## sh 文件依赖检测开始 ##########')
         cmd_list = self._get_cmd_list_file(self.std_path)
-        # # result = {
-        # #     'result': 'pass',
-        # #     'data': []
-        # # }
         for file in self.file_list:
             result_file = 'pass'
             subprocess.getoutput(f'chmod +x AppChecker_sh/checker_sh/lsbappchk-sh.pl')
             cmd = f'./AppChecker_sh/checker_sh/lsbappchk-sh.pl -o logs/{file}.log -c {cmd_list} {file}'
             fetch = subprocess.getoutput(cmd)
-            # print(cmd)
-            # print(fetch, '='*30)
             infos = []
             for line in fetch.split('\n'):
                 if line.startswith('[FAIL]'):
@@ -80,6 +79,7 @@ class ShChecker(Checker):
                 'result': result_file,
                 'info': info
             })
+            self.result['result'] = self.result['result'] or 'pass'
         return self
 
 

@@ -50,7 +50,7 @@ def _version_compare(version1: str, version2: str):
 
 
 def _generate_detail_json(item: str, level: str, result: str, info: str = ''):
-    return {'item': item, 'level': level, 'result': result, 'info': info, }
+    return {'item': item, 'level': level, 'result': result if item != 'error' else 'error', 'info': info, }
 
 
 def get_deb_depends(file: str):
@@ -105,21 +105,25 @@ def deb_check(checker: Checker, name: str, checklist: list):
     :param checklist: 待检查依赖列表
     :return:
     """
-    warning_num = 0
-    data = {'name': name, 'result': '', 'detail': []}
-    if checklist:
-        for pkg in checklist:
-            # todo
-            # E: You must put some 'deb-src' URIs in your sources.list
-            # sourcelist缺少deb-src时应该处理为异常
-            print('apt showsrc {} | grep Package: | awk \'{{print $NF}}\' | sort | uniq'.format(pkg['name']))
-            pkgname = subprocess.getoutput('apt showsrc {} | grep Package: | awk \'{{print $NF}}\' | sort | uniq'.format(pkg['name'])).split('\n')[-1]
 
-            if 'deb-src' in pkgname and 'sources.list' in pkgname:
-                checker.logger.error(pkgname)
-                checker.logger.error('请确认是否安装apt-file 以及sourcelist里配置好deb-src')
-                sys.exit(1)
-                # return 'warning'
+    if checklist:
+        # 依赖列表有内容
+        warning_num = 0
+        data = []
+        for pkg in checklist:
+            cmd1 = 'apt-cache show {} | grep Source: | sort | uniq'.format(pkg['name'])
+            fetch1 = subprocess.getoutput(cmd1).split()
+            cmd2 = 'apt-cache show {} | grep Package: | sort | uniq'.format(pkg['name'])
+            fetch2 = subprocess.getoutput(cmd2).split()
+            if fetch1:
+                checker.logger.info(f'执行  {cmd1}, 返回  {fetch1}')
+                pkgname = fetch1[1]
+            elif fetch2:
+                checker.logger.info(f'执行  {cmd2}, 返回  {fetch2}')
+                pkgname = fetch2[1]
+            else:
+                checker.logger.info(f'源里查找不到该包，查询的包名作为其源码包名, {pkg["name"]}')
+                pkgname = pkg['name']
 
             checker.logger.info(pkg['name'] + ' 对应的源码包为 ' + pkgname)
 
@@ -127,7 +131,6 @@ def deb_check(checker: Checker, name: str, checklist: list):
             version = pkg['version']
             checker.logger.info('### 正在检查' + pkgname + ' ###')
             # 具体的检查步骤
-            # print(checker.stdfile.keys())
             if pkgname not in checker.stdfile.keys():
                 checker.logger.info('该包未在标准中')
                 checker.logger.info('结果为warning')
@@ -176,19 +179,20 @@ def deb_check(checker: Checker, name: str, checklist: list):
                         checker.logger.info('结果为warning')
                         detail = _generate_detail_json(pkgname, level, 'warning', '该包系统不保证兼容，不推荐使用')
                         warning_num += 1
-            data['detail'].append(detail)
+            data.append(detail)
             checker.logger.info('### ' + pkgname + ' 检查完毕 ###')
+        if warning_num != 0:
+            result = 'warning'
+        else:
+            result = 'pass'
+
+        checker.result['data'] = data
+
     else:
+        # 依赖列表为空
+        result = ''
         checker.logger.info('### ' + name + '没有依赖 ###')
-
-    if warning_num != 0:
-        data['result'] = 'warning'
-    else:
-        data['result'] = 'pass'
-
-    checker.result['data'].append(data)
-
-    return data['result']
+    return result
 
 
 class PkgChecker(Checker):
@@ -268,9 +272,7 @@ class PkgChecker(Checker):
         else:
             self.logger.warning('本包格式暂不支持')
             result = 'warning'
-
         self.result['result'] = result
-
         self.logger.info('##### 包 ' + self.file + ' 检测完毕 #####')
         self.logger.info('########## 软件包依赖检测完成 ##########')
         # print(json.dumps(self.result, indent=4, ensure_ascii=False))

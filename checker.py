@@ -18,7 +18,6 @@ from utils.myjson import Json
 from utils.logger import init_logger
 
 
-
 class Checker(ABC):
     def __init__(self):
         """
@@ -36,7 +35,7 @@ class Checker(ABC):
         }
         """
         self.result = {
-            'result': 'pass',
+            'result': '',
             'data': []
         }
         # 初始化logger
@@ -77,8 +76,10 @@ class Checker(ABC):
         :return: 统计数据
         """
         stats = dict()
+        # print(self.result)
         for item in self.result.get('data'):
             stats[item.get('result')] = stats[item.get('result')] + 1 if stats.get(item.get('result')) else 1
-        self.logger.info(f'测试完成，{self.__class__.__name__}测试结果: {stats}')
+        self.logger.info(f"测试完成，{self.__class__.__name__}测试结果: {self.result.get('result')}")
+        self.logger.info(f"测试完成，{self.__class__.__name__}结果详情: {stats}")
         return stats
 
