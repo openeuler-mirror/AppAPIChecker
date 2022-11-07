@@ -63,7 +63,7 @@ class ShChecker(Checker):
         self.logger.info('########## sh 文件依赖检测开始 ##########')
         cmd_list = self._get_cmd_list_file(self.std_path)
         for file in self.file_list:
-            result_file = 'pass'
+            file_result = 'pass'
             subprocess.getoutput(f'chmod +x AppChecker_sh/checker_sh/lsbappchk-sh.pl')
             cmd = f'./AppChecker_sh/checker_sh/lsbappchk-sh.pl -o logs/{file}.log -c {cmd_list} {file}'
             fetch = subprocess.getoutput(cmd)
@@ -71,12 +71,12 @@ class ShChecker(Checker):
             for line in fetch.split('\n'):
                 if line.startswith('[FAIL]'):
                     infos.append(line)
-                    result_file = 'fail'
+                    file_result = 'fail'
                     self.result['result'] = 'fail'
             info = '\n'.join(infos)
             self.result['data'].append({
-                'name': file,
-                'result': result_file,
+                'name': os.path.basename(file),
+                'result': file_result,
                 'info': info
             })
             self.result['result'] = self.result['result'] or 'pass'

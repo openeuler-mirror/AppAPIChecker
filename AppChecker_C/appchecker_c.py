@@ -40,7 +40,7 @@ def so_check(checker: Checker, name: str, checklist: list, std_list=[]):
         :return:
         """
     warning_num = 0
-    data = {'name': name, 'result': '', 'detail': []}
+    data = {'name': os.path.basename(name), 'result': '', 'detail': []}
     for so in checklist:
         checker.logger.info('### 正在检查' + so + ' ###')
         # 具体的检查步骤

@@ -62,11 +62,12 @@ def get_deb_depends(file: str):
     deb_list_json = []
     pre_dep_list = re.split('[,|]', subprocess.getoutput(
         'dpkg -f {} Pre-Depends | sed \'s/ //g\''.format(file)).split('\n')[-1])
+    # print(pre_dep_list)
     if pre_dep_list != ['']:
         for deb in pre_dep_list:
             if deb.find('(') != -1:
-                data = {'name': re.findall(r'(.*)\(', deb)[0], 'limit': re.findall(r'\((.?=)\s?', deb)[0],
-                        'version': re.findall(r'=\s?(.*)\)', deb)[0]}
+                data = {'name': re.findall(r'(.*)\(', deb)[0], 'limit': re.findall(r'\((<<|<=|=|>=|>>)\s?', deb)[0],
+                        'version': re.findall(r'(?:<<|<=|=|>=|>>)\s?(.*)\)', deb)[0]}
             else:
                 data = {'name': deb, 'limit': '', 'version': ''}
             deb_list_json.append(data)
@@ -76,8 +77,8 @@ def get_deb_depends(file: str):
     if dep_list != ['']:
         for deb in dep_list:
             if deb.find('(') != -1:
-                data = {'name': re.findall(r'(.*)\(', deb)[0], 'limit': re.findall(r'\((.?=)\s?', deb)[0],
-                        'version': re.findall(r'=\s?(.*)\)', deb)[0]}
+                data = {'name': re.findall(r'(.*)\(', deb)[0], 'limit': re.findall(r'\((<<|<=|=|>=|>>)\s?', deb)[0],
+                        'version': re.findall(r'(?:<<|<=|=|>=|>>)\s?(.*)\)', deb)[0]}
             else:
                 data = {'name': deb, 'limit': '', 'version': ''}
             deb_list_json.append(data)
@@ -134,21 +135,21 @@ def deb_check(checker: Checker, name: str, checklist: list):
             if pkgname not in checker.stdfile.keys():
                 checker.logger.info('该包未在标准中')
                 checker.logger.info('结果为warning')
-                detail = _generate_detail_json(pkgname, 'none', 'warning', '该包为不推荐使用的包，请您使用标准中的包')
+                detail = _generate_detail_json(pkg['name'], 'none', 'warning', '该包为不推荐使用的包，请您使用标准中的包')
                 warning_num += 1
             else:
                 level = checker.stdfile[pkgname]['level']
                 if checker.stdfile[pkgname]['deprecated'] == 'true':
                     checker.logger.info('该包即将废弃')
                     checker.logger.info('结果为warning')
-                    detail = _generate_detail_json(pkgname, level, 'warning', '该包即将在下一版标准中废弃，不推荐使用')
+                    detail = _generate_detail_json(pkg['name'], level, 'warning', '该包即将在下一版标准中废弃，不推荐使用')
                     warning_num += 1
                 else:
                     if level == 'L1' or level == 'L2':
                         if limit == '':
                             checker.logger.info('依赖版本没有要求')
                             checker.logger.info('结果为pass')
-                            detail = _generate_detail_json(pkgname, level, 'pass')
+                            detail = _generate_detail_json(pkg['name'], level, 'pass')
                         elif limit == '>=':
                             # 版本比较
                             std_version = checker.stdfile[pkgname]['version']
@@ -156,31 +157,31 @@ def deb_check(checker: Checker, name: str, checklist: list):
                             if result == 0:
                                 checker.logger.info('依赖版本符合标准要求')
                                 checker.logger.info('结果为pass')
-                                detail = _generate_detail_json(pkgname, level, 'pass')
+                                detail = _generate_detail_json(pkg['name'], level, 'pass')
                             elif result < 0:
                                 checker.logger.info('依赖版本要求 ' + version + ' 低于 ' + std_version)
                                 checker.logger.info('结果为warning')
-                                detail = _generate_detail_json(pkgname, level, 'warning',
+                                detail = _generate_detail_json(pkg['name'], level, 'warning',
                                                                '依赖版本要求 ' + version + ' 低于 ' + std_version)
                                 warning_num += 1
                             else:
                                 checker.logger.info('依赖版本要求 ' + version + ' 高于 ' + std_version)
                                 checker.logger.info('结果为warning')
-                                detail = _generate_detail_json(pkgname, level, 'warning',
+                                detail = _generate_detail_json(pkg['name'], level, 'warning',
                                                                '依赖版本要求 ' + version + ' 高于 ' + std_version)
                                 warning_num += 1
                         else:
                             checker.logger.info('依赖版本要求过严')
                             checker.logger.info('结果为warning')
-                            detail = _generate_detail_json(pkgname, level, 'warning', '该依赖要求版本过严，建议修改')
+                            detail = _generate_detail_json(pkg['name'], level, 'warning', '该依赖要求版本过严，建议修改')
                             warning_num += 1
                     else:
                         checker.logger.info('该包系统不保证兼容')
                         checker.logger.info('结果为warning')
-                        detail = _generate_detail_json(pkgname, level, 'warning', '该包系统不保证兼容，不推荐使用')
+                        detail = _generate_detail_json(pkg['name'], level, 'warning', '该包系统不保证兼容，不推荐使用')
                         warning_num += 1
             data.append(detail)
-            checker.logger.info('### ' + pkgname + ' 检查完毕 ###')
+            checker.logger.info('### ' + pkg['name'] + ' 检查完毕 ###')
         if warning_num != 0:
             result = 'warning'
         else:

@@ -155,6 +155,7 @@ def main(args):
     logger.info(f'测试结果为 {stat}')
     logger.info(f'测试完成， 测试报告请查看 {report}')
     logger.info(f'更多详细报告在{package_detail.get("output")}')
+    logger.info(f'更多详细日志在logs目录')
 
 
 if __name__ == '__main__':
