@@ -37,3 +37,37 @@
 
     1. 测试完成后，报告生成在运行目录下，展示文件的测试结果，报告以json格式展示；结果一栏中：PASS代表该检查项通过测试；WARNING代表检查项存在兼容性问题，具体原因见info内容；
     2. 测试完成后，日志记录在/logs文件夹下，正常日志记录在checker_info.log中，错误日志记录在/logs/checker_error.log中
+
+## 结果说明
+    {
+        "result": "warning",    ——整体结果  
+        "data": [               ——详细测试数据
+            {
+                "name": "xxx",      ——elf文件名称
+                "result": "pass",   ——此文件依赖库检查结果
+                "detail": [         ——此文件依赖库具体检查结果
+                    {
+                        "item": "libpthread.so.0",  ——依赖库名
+                        "level": "L1",              ——依赖库标准等级
+                        "result": "pass",           ——依赖库检查结果
+                        "info": ""                  ——结果提示信息
+                    },
+                    ……
+                ]
+            },
+            ……
+            {
+                "name": "other",                    ——此部分为包内elf文件检查结果
+                "result": "pass",                   ——包内elf文件总体检查结果
+                "detail": [                         ——包内各elf文件检查结果
+                    {
+                        "item": "eclipse_11600.so", ——包内elf文件名
+                        "level": "none",
+                        "result": "pass",
+                        "info": ""
+                    },
+                    ……
+                ]
+            }
+        ]
+    }
