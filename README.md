@@ -50,7 +50,7 @@ AppAPIChecker
 1.  环境要求：  
 python >= 3.7
 2.  执行方式  
-python manage.py 软件包 -t desktop -m dpkg  
+python manage.py -p 软件包 -t desktop -m dpkg  
 3.  参数说明  
 usage: manage.py [-h] -t TYPE -m PKGMT [-l LEVEL] -p PACKAGE_PATH [-j LIBLIST_PATH] [-o SOLIST_PATH] [-a LIBSCAN] [-i INTERFACESCAN] [-v]   
 optional arguments:
