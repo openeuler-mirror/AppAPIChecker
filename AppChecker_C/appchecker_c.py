@@ -179,12 +179,13 @@ class SoChecker(Checker):
             if depends_result == 'warning':
                 warning_num += 1
             self.logger.info('#####包内so文件列表检查完毕#####')
-            if warning_num != 0:
-                self.result['result'] = 'warning'
-            else:
-                self.result['result'] = 'pass'
         else:
             self.logger.info("##### 包内无so文件 #####")
+
+        if warning_num != 0:
+            self.result['result'] = 'warning'
+        else:
+            self.result['result'] = 'pass'
 
         # print(json.dumps(self.result, indent=4, ensure_ascii=False))
         self.logger.info('########## ELF文件依赖检测完毕 ##########')
